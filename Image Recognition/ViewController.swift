@@ -10,7 +10,7 @@ import UIKit
 import SceneKit
 import ARKit
 
-class ViewController: UIViewController, ARSCNViewDelegate {
+class ViewController: UIViewController {
 
     @IBOutlet var sceneView: ARSCNView!
     
@@ -22,12 +22,6 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         // Show statistics such as fps and timing information
         sceneView.showsStatistics = true
-        
-        // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
-        
-        // Set the scene to the view
-        sceneView.scene = scene
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -35,6 +29,10 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         // Create a session configuration
         let configuration = ARWorldTrackingConfiguration()
+        
+        let images = ARReferenceImage.referenceImages(inGroupNamed: "images", bundle: nil)
+        
+        configuration.detectionImages = images
 
         // Run the view's session
         sceneView.session.run(configuration)
@@ -46,30 +44,39 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Pause the view's session
         sceneView.session.pause()
     }
+}
 
-    // MARK: - ARSCNViewDelegate
-    
-/*
-    // Override to create and configure nodes for anchors added to the view's session.
-    func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
-        let node = SCNNode()
-     
+// MARK: - ARSCNViewDelegate
+extension ViewController: ARSCNViewDelegate {
+    func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
+        guard let anchor = anchor as? ARImageAnchor else { return }
+        
+        let planeNode = createPlane(imageAnchor: anchor)
+        
+        planeNode.runAction(
+            .sequence([
+                .wait(duration: 5),
+                .fadeOut(duration: 2),
+                .removeFromParentNode()
+            ])
+        )
+        
+        node.addChildNode(planeNode)
+    }
+}
+
+// MARK: - Methods
+extension ViewController {
+    func createPlane(imageAnchor: ARImageAnchor) -> SCNNode {
+        
+        let image = imageAnchor.referenceImage
+        let size = image.physicalSize
+        let plane = SCNPlane(width: size.width, height: size.height)
+        let node = SCNNode(geometry: plane)
+        
+        plane.firstMaterial?.diffuse.contents = UIImage(named: "washington-drivers-license")
+        node.eulerAngles.x = -.pi / 2
+        
         return node
-    }
-*/
-    
-    func session(_ session: ARSession, didFailWithError error: Error) {
-        // Present an error message to the user
-        
-    }
-    
-    func sessionWasInterrupted(_ session: ARSession) {
-        // Inform the user that the session has been interrupted, for example, by presenting an overlay
-        
-    }
-    
-    func sessionInterruptionEnded(_ session: ARSession) {
-        // Reset tracking and/or remove existing anchors if consistent tracking is required
-        
     }
 }
